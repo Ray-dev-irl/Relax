@@ -3,459 +3,875 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Relax Space</title>
+<title>Relax Space Hub (Sync Fixed)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-body { box-sizing: border-box; touch-action: manipulation; background-color: #1a1a1a; color: white; overscroll-behavior: none; }
+body { box-sizing: border-box; touch-action: manipulation; }
+html, body { width: 100%; height: 100%; margin: 0; padding: 0; overscroll-behavior: none; }
+.app-wrapper { width: 100%; height: 100%; }
 .focus-outline:focus-visible { outline: 2px solid #ffffff; outline-offset: 3px; }
 
 /* Animations */
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-.animate-fade { animation: fadeIn 0.3s ease-out forwards; }
+@keyframes fadeOut {
+0% { opacity: 1; transform: scale(0); }
+100% { opacity: 0; transform: scale(2); }
+}
+@keyframes rippleExpand {
+0% { width: 10px; height: 10px; opacity: 0.8; transform: scale(0.5); }
+100% { width: 100px; height: 100px; opacity: 0; transform: scale(2.5); }
+}
+.breathing-anim { transition: transform 4s ease-in-out; }
 
-/* Loading Spinner */
-.loader { border: 2px solid rgba(255,255,255,0.1); border-top: 2px solid #38bdf8; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; display: inline-block; }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-/* Custom Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+/* Block Blast Styles */
+.bb-cell { transition: background-color 0.2s, transform 0.1s; }
+.bb-shape-btn { transition: transform 0.1s; }
+.bb-shape-btn.selected { border: 2px solid #38bdf8; background-color: rgba(56, 189, 248, 0.1); transform: scale(1.1); }
 </style>
 </head>
 <body>
-<div id="relax-app" class="w-full h-full min-h-screen flex flex-col overflow-hidden">
+<div id="relax-app" class="app-wrapper bg-[#1a1a1a] text-white flex items-stretch justify-center overflow-y-auto">
 
-<div id="auth-screen" class="w-full h-screen flex flex-col items-center justify-center p-6 z-50 absolute bg-[#1a1a1a]">
-<div class="w-full max-w-md p-8 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md flex flex-col items-center gap-4">
-<h1 class="text-3xl font-bold tracking-tight text-[#38bdf8]">Relax Space</h1>
-<p class="text-sm opacity-60" id="connection-status">Local Mode (Saved to Device)</p>
-<form id="auth-form" class="w-full flex flex-col gap-3">
-<input type="text" id="auth-username" class="w-full rounded-lg px-4 py-3 bg-[#0a0a0a] border border-white/20 text-white placeholder-white/30 focus:border-[#38bdf8] outline-none transition" placeholder="Username" required>
-<button type="submit" class="w-full py-3 rounded-full bg-[#38bdf8] hover:bg-[#0ea5e9] text-black font-bold transition transform active:scale-95">Enter World</button>
+<div id="auth-screen" class="w-full max-w-md px-4 py-6 flex flex-col items-center justify-center gap-4">
+<div class="w-full rounded-2xl p-6 border border-white/10 bg-white/5">
+<h1 class="text-3xl font-semibold mb-2 text-center">Welcome</h1>
+<p class="text-sm opacity-80 mb-6 text-center">Login to your space</p>
+<form id="auth-form" class="flex flex-col gap-3">
+<div><label for="auth-username" class="text-sm font-medium">Username</label> <input type="text" id="auth-username" name="auth-username" class="focus-outline w-full rounded-lg px-3 py-2 text-sm text-white bg-[#1a1a1a] border border-white/20 placeholder-white/30 mt-1" placeholder="Enter username..." required>
+</div>
+<div><label for="auth-password" class="text-sm font-medium">Password</label> <input type="password" id="auth-password" name="auth-password" class="focus-outline w-full rounded-lg px-3 py-2 text-sm text-white bg-[#1a1a1a] border border-white/20 placeholder-white/30 mt-1" placeholder="Enter password..." required>
+</div>
+<div class="flex gap-2"><button type="submit" id="login-btn" class="focus-outline text-sm px-5 py-2 rounded-full bg-[#38bdf8] hover:bg-[#0ea5e9] text-[#020617] font-semibold transition flex-1"> Login </button> <button type="button" id="register-btn" class="focus-outline text-sm px-5 py-2 rounded-full border border-white/20 hover:bg-white/10 transition flex-1"> Register </button>
+</div>
 </form>
 </div>
 </div>
 
-<div id="main-app" class="hidden flex-1 flex flex-col h-screen overflow-hidden">
-
-<header class="w-full px-4 py-3 border-b border-white/10 bg-white/5 flex justify-between items-center shrink-0">
-<div class="flex flex-col">
-<h1 id="header-title" class="text-lg font-bold">Community Hub</h1>
-<div class="flex items-center gap-2 text-xs opacity-60">
-<span id="user-display"></span>
-<span id="sync-status" class="text-[#38bdf8] hidden"><div class="loader"></div> Syncing...</span>
+<div id="main-app" class="hidden w-full max-w-5xl px-3 sm:px-4 py-4 sm:py-6 flex flex-col gap-3 sm:gap-4">
+<header class="w-full flex items-center justify-between">
+<div class="flex flex-col gap-1">
+<h1 id="main-title" class="text-2xl sm:text-3xl font-semibold tracking-tight">Your Quiet Corner</h1>
+<p id="subtitle-text" class="text-xs sm:text-sm opacity-80">Pick a mood, share a thought, join a group.</p>
 </div>
-</div>
-<div class="flex items-center gap-2">
-<button id="admin-data-btn" class="hidden text-xs bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold px-3 py-1.5 rounded uppercase shadow-[0_0_10px_rgba(234,179,8,0.5)]">📂 DATA</button>
-<button id="refresh-btn" class="text-xs border border-white/20 px-3 py-1.5 rounded hover:bg-white/10">↻ Refresh</button>
-<button id="logout-btn" class="text-xs border border-white/20 px-3 py-1.5 rounded hover:bg-white/10">Exit</button>
+<div class="flex items-center gap-2"><span id="current-username" class="text-xs sm:text-sm opacity-80"></span> <button type="button" id="logout-btn" class="focus-outline text-xs px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 transition"> Logout </button>
 </div>
 </header>
+<main class="flex-1 w-full flex flex-col gap-3 sm:gap-4">
 
-<main class="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+<section class="w-full rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10 bg-white/5" id="mode-card">
+<h2 id="modes-label" class="text-sm sm:text-base font-semibold mb-2 sm:mb-3">Choose your mood</h2>
+<div class="flex flex-wrap gap-1.5 sm:gap-2" role="radiogroup">
+<button type="button" class="mode-btn focus-outline text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 transition" data-mode="Calm"> 🌊 Calm </button>
+<button type="button" class="mode-btn focus-outline text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 hover:bg-white/15 transition" data-mode="Dreamy"> ✨ Dreamy </button>
+<button type="button" class="mode-btn focus-outline text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 hover:bg-white/15 transition" data-mode="Cozy"> 🔥 Cozy </button>
+<button type="button" class="mode-btn focus-outline text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 hover:bg-white/15 transition" data-mode="Good"> 😊 Good </button>
+<button type="button" class="mode-btn focus-outline text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 hover:bg-white/15 transition" data-mode="Sad"> 😢 Sad </button>
+<button type="button" class="mode-btn focus-outline text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 hover:bg-white/15 transition" data-mode="Angry"> 😤 Angry </button>
+</div>
+</section>
 
-<section id="mood-section" class="w-full">
-<h2 class="text-xs font-bold uppercase tracking-widest opacity-50 mb-2">Atmosphere</h2>
+<section class="w-full rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10 bg-white/5">
+<div class="flex items-center justify-between mb-2 sm:mb-3">
+<h2 class="text-sm sm:text-base font-semibold">Groups</h2><button type="button" id="create-group-btn" class="focus-outline text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-[#38bdf8] hover:bg-[#0ea5e9] text-[#020617] font-semibold transition"> + Create </button>
+</div>
+<div id="create-group-form" class="hidden mb-3 sm:mb-4 p-2.5 sm:p-3 rounded-xl bg-[#020617]/50 border border-white/20">
+<form id="group-form" class="flex flex-col gap-2.5 sm:gap-3">
+<div><label for="group-name" class="text-xs sm:text-sm font-medium">Group Name</label> <input type="text" id="group-name" name="group-name" class="focus-outline w-full rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-white bg-[#1a1a1a] border border-white/20 placeholder-white/30 mt-1" placeholder="Enter group name..." required>
+</div>
+<div><label for="group-password" class="text-xs sm:text-sm font-medium">Password (optional)</label> <input type="password" id="group-password" name="group-password" class="focus-outline w-full rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-white bg-[#1a1a1a] border border-white/20 placeholder-white/30 mt-1" placeholder="Leave empty for no password...">
+</div>
+<div class="flex gap-2"><button type="submit" class="focus-outline text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-[#38bdf8] hover:bg-[#0ea5e9] text-[#020617] font-semibold transition"> Create </button> <button type="button" id="cancel-group-btn" class="focus-outline text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/20 hover:bg-white/10 transition"> Cancel </button>
+</div>
+</form>
+</div>
+<div id="groups-list" class="flex flex-wrap gap-1.5 sm:gap-2">
+<button type="button" id="all-posts-btn" class="focus-outline text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/30 bg-white/20 hover:bg-white/25 transition"> 📋 All Posts </button>
+</div>
+</section>
+
+<div id="main-view" class="w-full flex flex-col gap-3 sm:gap-4">
+<div class="w-full grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+<section class="rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10 bg-white/5">
+<h2 class="text-sm sm:text-base font-semibold mb-2 sm:mb-3">Share a thought</h2>
+<form id="post-form" class="flex flex-col gap-2.5 sm:gap-3"><textarea id="post-text" name="post-text" rows="3" class="focus-outline w-full rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-white bg-[#020617]/50 border border-white/20 placeholder-white/30 resize-none" placeholder="What's on your mind?"></textarea>
+<div class="flex items-center justify-between gap-2 sm:gap-3">
+<p id="form-status" class="text-xs opacity-80 text-[#38bdf8]"></p><button id="post-submit" type="submit" class="focus-outline text-xs sm:text-sm px-4 sm:px-5 py-1.5 sm:py-2 rounded-full bg-[#38bdf8] hover:bg-[#0ea5e9] text-[#020617] font-semibold transition"> Share </button>
+</div>
+</form>
+</section>
+<section class="rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10 bg-white/5 flex flex-col gap-2 sm:gap-3">
+<h2 class="text-sm sm:text-base font-semibold" id="feed-title">Community Board <span class="text-[10px] opacity-50 font-normal ml-2">● Live</span></h2>
+<div id="feed-empty" class="text-xs sm:text-sm opacity-75">No posts yet.</div>
+<ul id="feed-list" class="flex flex-col gap-2 text-xs sm:text-sm max-h-64 overflow-y-auto pr-1"></ul>
+</section>
+</div>
+
+<section class="rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10 bg-white/5">
+<h2 class="text-sm sm:text-base font-semibold mb-3">🎨 Drawing Gallery</h2>
+<div id="gallery-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+<p class="text-xs opacity-50 col-span-full">Post your drawings in the game to see them here!</p>
+</div>
+</section>
+</div>
+
+<div id="group-view" class="hidden w-full flex flex-col gap-3 sm:gap-4 relative">
+<div class="w-full rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10 bg-white/5 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<h2 id="group-view-title" class="text-base sm:text-lg font-semibold">Group Chat</h2>
+<button id="group-settings-btn" class="text-xs p-1.5 rounded-full hover:bg-white/10 border border-transparent hover:border-white/20">⚙️</button>
+</div>
+<button type="button" id="exit-group-btn" class="focus-outline text-xs sm:text-sm px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/20 hover:bg-white/10 transition"> ← Back to Main </button>
+</div>
+
+<div id="group-settings-menu" class="hidden absolute top-16 left-4 z-20 w-48 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-xl p-2 flex flex-col gap-1">
+<p class="text-xs font-bold px-2 py-1 text-white/50 border-b border-white/10">Settings</p>
+<button id="delete-group-btn" class="text-left text-xs text-red-400 hover:bg-red-500/10 px-2 py-1.5 rounded">Delete Group</button>
+<button id="close-settings-btn" class="text-left text-xs hover:bg-white/10 px-2 py-1.5 rounded">Close</button>
+</div>
+
+<div class="w-full rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10 bg-white/5 flex flex-col gap-3 sm:gap-4">
+<ul id="group-messages-list" class="flex flex-col gap-2 text-xs sm:text-sm max-h-96 overflow-y-auto pr-1 min-h-[150px]">
+<li class="text-center opacity-50 italic mt-4">Welcome to the group chat.</li>
+</ul>
+<form id="group-message-form" class="flex flex-col gap-2.5 sm:gap-3 border-t border-white/10 pt-3 sm:pt-4">
+<textarea id="group-message-text" rows="2" class="focus-outline w-full rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-white bg-[#020617]/50 border border-white/20 placeholder-white/30 resize-none" placeholder="Type message..."></textarea>
+<button type="submit" class="focus-outline text-xs sm:text-sm px-4 sm:px-5 py-1.5 sm:py-2 rounded-full bg-[#38bdf8] hover:bg-[#0ea5e9] text-[#020617] font-semibold self-end">Send</button>
+</form>
+</div>
+</div>
+
+<section class="w-full rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10 bg-white/5 flex flex-col gap-3 sm:gap-4">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+<h2 class="text-sm sm:text-base font-semibold">Mini Games</h2>
+<div class="flex flex-wrap gap-1.5 sm:gap-2">
+<button type="button" class="game-btn focus-outline text-xs px-2.5 sm:px-3 py-1 rounded-full border border-white/20 bg-white/10 hover:bg-white/20" data-game="breathing">🫁 Breathe</button>
+<button type="button" class="game-btn focus-outline text-xs px-2.5 sm:px-3 py-1 rounded-full border border-white/10 hover:bg-white/15" data-game="stars">⭐ Stars</button>
+<button type="button" class="game-btn focus-outline text-xs px-2.5 sm:px-3 py-1 rounded-full border border-white/10 hover:bg-white/15" data-game="ripple">💧 Ripple</button>
+<button type="button" class="game-btn focus-outline text-xs px-2.5 sm:px-3 py-1 rounded-full border border-white/10 hover:bg-white/15" data-game="drawing">🎨 Drawing</button>
+<button type="button" class="game-btn focus-outline text-xs px-2.5 sm:px-3 py-1 rounded-full border border-white/10 hover:bg-white/15" data-game="blockblast">🧱 Block Blast</button>
+<button type="button" class="game-btn focus-outline text-xs px-2.5 sm:px-3 py-1 rounded-full border border-white/10 hover:bg-white/15" data-game="popcorn">🍿 Popcorn</button>
+<button type="button" class="game-btn focus-outline text-xs px-2.5 sm:px-3 py-1 rounded-full border border-white/10 hover:bg-white/15" data-game="snake">🐍 Snake Battle</button>
+</div>
+</div>
+
+<div id="breathing-game" class="hidden flex-col items-center gap-3 sm:gap-4">
+<div class="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-[#38bdf8] flex items-center justify-center bg-white/5 breathing-anim" id="breathing-circle"><span id="breathing-label" class="text-xs sm:text-sm opacity-80">Inhale…</span>
+</div><button type="button" id="breathing-toggle" class="focus-outline text-xs sm:text-sm px-4 sm:px-5 py-1.5 sm:py-2 rounded-full bg-[#38bdf8] hover:bg-[#0ea5e9] text-[#020617] font-semibold transition"> Start </button>
+</div>
+
+<div id="stars-game" class="hidden flex-col items-center gap-3 sm:gap-4">
+<div class="w-full h-40 sm:h-48 rounded-xl border border-white/10 relative overflow-hidden" id="stars-canvas" style="background-color: #2a2a2a;"></div>
+<p class="text-xs opacity-75 text-center">Tap to create stars</p>
+</div>
+
+<div id="ripple-game" class="hidden flex-col items-center gap-3 sm:gap-4">
+<div class="w-full h-40 sm:h-48 rounded-xl border border-white/10 relative overflow-hidden" id="ripple-canvas" style="background-color: #2a2a2a; touch-action: none;"></div>
+<p class="text-xs opacity-75 text-center">Move to create large ripples</p>
+</div>
+
+<div id="drawing-game" class="hidden flex-col gap-3 sm:gap-4">
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center"><span class="text-xs opacity-70">Tools:</span>
+<div class="flex gap-2">
+<button id="post-drawing-btn" class="text-xs px-3 py-1 rounded bg-green-500/20 text-green-400 border border-green-500/50 hover:bg-green-500/30">Post to Gallery</button>
+<button id="clear-canvas" class="text-xs border px-2 py-1 rounded border-white/20">Clear</button>
+</div>
+</div>
 <div class="flex flex-wrap gap-2">
-<button class="mood-btn px-4 py-1.5 rounded-full text-xs border border-white/10 bg-white/5 hover:bg-white/10 transition" data-color="#1a1a1a">🌑 Dark</button>
-<button class="mood-btn px-4 py-1.5 rounded-full text-xs border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-200 transition" data-color="#0f172a">🌊 Calm</button>
-<button class="mood-btn px-4 py-1.5 rounded-full text-xs border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 transition" data-color="#1e1b4b">✨ Dream</button>
-<button class="mood-btn px-4 py-1.5 rounded-full text-xs border border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/20 text-orange-200 transition" data-color="#2c100e">🔥 Cozy</button>
+<button class="tool-btn text-xs px-2 py-1 rounded bg-[#38bdf8]/20 border border-[#38bdf8]" data-tool="pen">🖊️ Pen</button>
+<button class="tool-btn text-xs px-2 py-1 rounded border border-white/20" data-tool="brush">🖌️ Brush</button>
+<button class="tool-btn text-xs px-2 py-1 rounded border border-white/20" data-tool="marker">✏️ Marker</button>
+<button class="tool-btn text-xs px-2 py-1 rounded border border-white/20" data-tool="eraser">🧹 Eraser</button>
+</div>
+<div class="flex flex-wrap gap-2 items-center">
+<span class="text-xs opacity-60">Size:</span>
+<button class="size-btn text-xs px-2 py-1 rounded border border-white/20" data-size="2">Thin</button>
+<button class="size-btn text-xs px-2 py-1 rounded bg-[#38bdf8]/20 border border-[#38bdf8]" data-size="5">Normal</button>
+<button class="size-btn text-xs px-2 py-1 rounded border border-white/20" data-size="10">Thick</button>
+</div>
+<div class="flex flex-wrap gap-2">
+<button class="color-btn w-6 h-6 rounded-full bg-[#38bdf8] border-2 border-white" data-draw-color="#38bdf8"></button>
+<button class="color-btn w-6 h-6 rounded-full bg-[#ffffff] border-2 border-white/20" data-draw-color="#ffffff"></button>
+<button class="color-btn w-6 h-6 rounded-full bg-[#ef4444] border-2 border-white/20" data-draw-color="#ef4444"></button>
+<button class="color-btn w-6 h-6 rounded-full bg-[#22c55e] border-2 border-white/20" data-draw-color="#22c55e"></button>
+<button class="color-btn w-6 h-6 rounded-full bg-[#eab308] border-2 border-white/20" data-draw-color="#eab308"></button>
+<button class="color-btn w-6 h-6 rounded-full bg-[#a855f7] border-2 border-white/20" data-draw-color="#a855f7"></button>
+</div>
+</div>
+<canvas id="drawing-canvas" width="800" height="400" class="w-full rounded-xl border border-white/10 cursor-crosshair" style="background-color: #2a2a2a; touch-action: none;"></canvas>
+</div>
+
+<div id="blockblast-game" class="hidden flex-col gap-3 sm:gap-4">
+<div class="flex items-center justify-between gap-2">
+<p class="text-xs sm:text-sm font-semibold">Score: <span id="bb-score">0</span></p>
+<button type="button" id="bb-reset" class="focus-outline text-xs px-2.5 sm:px-3 py-1 rounded-full border border-white/20 hover:bg-white/15">Restart</button>
+</div>
+<div id="bb-grid" class="grid grid-cols-8 gap-0.5 sm:gap-1 w-full max-w-[300px] mx-auto p-1.5 sm:p-2 rounded-xl bg-[#020617]/50 border border-white/10 aspect-square"></div>
+<div id="bb-shapes" class="flex justify-center gap-4 h-24 items-center"></div>
+</div>
+
+<div id="popcorn-game" class="hidden flex-col gap-3 sm:gap-4">
+<div class="flex items-center justify-between gap-2">
+<p class="text-xs sm:text-sm font-semibold">Score: <span id="popcorn-score">0</span></p>
+<button type="button" id="popcorn-reset" class="focus-outline text-xs px-2.5 sm:px-3 py-1 rounded-full border border-white/20 hover:bg-white/15">Start</button>
+</div>
+<canvas id="popcorn-canvas" width="600" height="400" class="w-full rounded-xl border border-white/10" style="background: linear-gradient(to bottom, #2a2a2a, #1a1a1a); touch-action: none;"></canvas>
+</div>
+
+<div id="snake-game" class="hidden flex-col gap-3 sm:gap-4">
+<div id="snake-menu" class="flex flex-col items-center justify-center gap-4 h-64 bg-white/5 rounded-xl border border-white/10">
+<h3 class="text-lg font-bold">Snake Battle Arena</h3>
+<div class="flex gap-3">
+<button id="snake-single-btn" class="px-4 py-2 bg-[#38bdf8] text-black rounded-full font-bold hover:bg-[#0ea5e9]">Solo Practice</button>
+<button id="snake-online-btn" class="px-4 py-2 border border-white/30 rounded-full hover:bg-white/10">Online (Multiplayer)</button>
+</div>
+</div>
+<div id="snake-servers" class="hidden flex-col gap-3 h-64 bg-white/5 rounded-xl border border-white/10 p-4">
+<h3 class="text-sm font-bold border-b border-white/10 pb-2">Select Server</h3>
+<div class="flex flex-col gap-2 overflow-y-auto">
+<button class="server-item text-left px-3 py-2 bg-white/5 hover:bg-white/10 rounded flex justify-between" data-server="NA-East-1">
+<span>Server: NA-East-1</span> <span class="text-[#22c55e]">9/10 Players</span>
+</button>
+<button class="server-item text-left px-3 py-2 bg-white/5 hover:bg-white/10 rounded flex justify-between" data-server="EU-West-1">
+<span>Server: EU-West-1</span> <span class="text-[#22c55e]">5/10 Players</span>
+</button>
+</div>
+<button id="back-to-menu" class="text-xs text-center mt-2 opacity-50">Back</button>
+</div>
+<div id="snake-lobby" class="hidden flex-col gap-3 h-64 bg-white/5 rounded-xl border border-white/10 p-4">
+<div class="flex justify-between items-center border-b border-white/10 pb-2">
+<h3 class="text-sm font-bold">Lobby</h3>
+<span class="text-xs opacity-70" id="lobby-server-name"></span>
+</div>
+<div class="flex-1 overflow-y-auto" id="lobby-list"></div>
+<button id="lobby-start-btn" class="w-full py-2 bg-[#22c55e] text-black font-bold rounded-lg opacity-50 cursor-not-allowed">Waiting for players...</button>
+</div>
+<div id="snake-play-area" class="hidden flex-col gap-2">
+<div class="flex justify-between">
+<span id="snake-status-text" class="text-xs font-bold text-[#38bdf8]">Alive</span>
+<button id="snake-quit" class="text-xs px-2 border rounded border-white/20">Quit</button>
+</div>
+<canvas id="snake-canvas" width="600" height="400" class="w-full rounded-xl border border-white/10" style="background-color: #2a2a2a;"></canvas>
+</div>
 </div>
 </section>
-
-<section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-<div class="rounded-xl p-4 border border-white/10 bg-white/5">
-<h2 class="text-sm font-bold mb-3">Share a Thought</h2>
-<textarea id="post-input" rows="2" class="w-full bg-black/20 rounded-lg p-3 text-sm border border-white/10 focus:border-[#38bdf8] outline-none resize-none" placeholder="Type here..."></textarea>
-<div class="flex justify-end mt-2">
-<button id="post-btn" class="px-5 py-1.5 bg-[#38bdf8] text-black text-xs font-bold rounded-full hover:bg-[#0ea5e9] transition">Post</button>
-</div>
-</div>
-
-<div class="rounded-xl p-4 border border-white/10 bg-white/5 flex flex-col h-64">
-<h2 class="text-sm font-bold mb-2 flex justify-between">
-Feed
-<span class="text-[10px] font-normal opacity-50" id="feed-source-label">Local Memory</span>
-</h2>
-<div id="feed-list" class="flex-1 overflow-y-auto flex flex-col gap-2 pr-2">
-<div class="text-center text-xs opacity-50 mt-10">No posts yet.</div>
-</div>
-</div>
-</section>
-
-<section>
-<h2 class="text-xs font-bold uppercase tracking-widest opacity-50 mb-3">Mini Games</h2>
-<div class="flex flex-wrap gap-2 mb-4">
-<button class="game-tab px-3 py-1.5 text-xs rounded border border-white/20 hover:bg-white/10" onclick="showGame('snake')">🐍 Snake</button>
-<button class="game-tab px-3 py-1.5 text-xs rounded border border-white/20 hover:bg-white/10" onclick="showGame('block')">🧱 Blocks</button>
-<button class="game-tab px-3 py-1.5 text-xs rounded border border-white/20 hover:bg-white/10" onclick="showGame('popcorn')">🍿 Popcorn</button>
-<button class="game-tab px-3 py-1.5 text-xs rounded border border-white/20 hover:bg-white/10" onclick="showGame('draw')">🎨 Draw</button>
-<button class="game-tab px-3 py-1.5 text-xs rounded border border-white/20 hover:bg-white/10" onclick="showGame('breathe')">🫁 Breathe</button>
-</div>
-
-<div id="game-display" class="w-full rounded-xl border border-white/10 bg-black/40 overflow-hidden relative min-h-[300px] flex items-center justify-center">
-<p class="text-sm opacity-40">Select a game above to play.</p>
-</div>
-</section>
-
 </main>
 </div>
 </div>
 
 <script>
-// =========================================================
-// ⚙️ SETUP
-// IF A PARENT GIVES YOU A LINK, PASTE IT BETWEEN THE QUOTES BELOW.
-// IF IT IS EMPTY "", THE APP WORKS IN OFFLINE MODE.
-const DATABASE_URL = "";
-// Example: "https://script.google.com/macros/s/..../exec"
+// --- STORAGE & SYNC ---
+let currentUser = sessionStorage.getItem('relaxUser');
+let isAdmin = false;
+let currentGroup = null;
 
-// URL to open if you are Admin and click the Data button
-const SHEET_EDIT_URL = "https://docs.google.com/spreadsheets";
-// =========================================================
+// Load data from LocalStorage
+function loadData(key) { return JSON.parse(localStorage.getItem(key)) || []; }
+function saveData(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
 
-let currentUser = "Ray_irl";
-let appData = [];
-let pollingInterval;
+// Initial Load
+let allGroups = loadData('relax_groups');
+let allPosts = loadData('relax_posts');
+let allGallery = loadData('relax_gallery');
+let allGroupMsgs = loadData('relax_group_msgs') || {}; // Object key=groupName, val=array
 
-// Check if we are online or offline
-const isOnline = DATABASE_URL.length > 10;
+// --- AUTO-REFRESH PULSE (The Fix) ---
+// This checks for updates every 1 second
+setInterval(() => {
+const freshPosts = loadData('relax_posts');
+const freshGroups = loadData('relax_groups');
+const freshGallery = loadData('relax_gallery');
+const freshGroupMsgs = loadData('relax_group_msgs') || {};
 
-if(isOnline) {
-document.getElementById('connection-status').innerText = "Online Cloud Mode";
-document.getElementById('feed-source-label').innerText = "Live Cloud Data";
+// If posts changed in another tab, update
+if (JSON.stringify(freshPosts) !== JSON.stringify(allPosts)) {
+allPosts = freshPosts;
+renderPosts();
+}
+// If groups changed
+if (JSON.stringify(freshGroups) !== JSON.stringify(allGroups)) {
+allGroups = freshGroups;
+renderGroups();
+}
+// If gallery changed
+if (JSON.stringify(freshGallery) !== JSON.stringify(allGallery)) {
+allGallery = freshGallery;
+renderGallery();
+}
+// If inside a group, check for new messages
+if(currentGroup) {
+const currentMsgs = allGroupMsgs[currentGroup] || [];
+const freshMsgs = freshGroupMsgs[currentGroup] || [];
+if(JSON.stringify(currentMsgs) !== JSON.stringify(freshMsgs)) {
+allGroupMsgs = freshGroupMsgs;
+renderGroupMessages(currentGroup);
+}
 } else {
-document.getElementById('connection-status').innerText = "Local Mode (Offline)";
-document.getElementById('feed-source-label').innerText = "Local Memory";
+allGroupMsgs = freshGroupMsgs;
 }
 
-// --- 1. AUTH & ADMIN ---
-document.getElementById('auth-form').addEventListener('submit', (e) => {
-e.preventDefault();
-const input = document.getElementById('auth-username').value.trim();
-if(!input) return;
+}, 1000);
+// ^^^ This 1000ms timer forces the app to look for changes
 
-currentUser = input;
-document.getElementById('user-display').innerText = "User: " + currentUser;
-
-// SWITCH SCREENS
+function showApp(name) {
+document.getElementById('current-username').textContent = "Hi, " + name;
 document.getElementById('auth-screen').classList.add('hidden');
 document.getElementById('main-app').classList.remove('hidden');
 
-// ADMIN CHECK (Ray_irl)
-if(currentUser === 'Ray_irl') {
-const btn = document.getElementById('admin-data-btn');
-btn.classList.remove('hidden');
+if(name === 'Ray_irl') {
+isAdmin = true;
+document.getElementById('current-username').innerHTML = "Hi, Ray_irl <span class='text-xs bg-red-500 px-1 rounded ml-1'>ADMIN</span>";
+}
+renderGroups();
+renderPosts();
+renderGallery();
+}
 
-if(isOnline) {
-btn.onclick = () => window.open(SHEET_EDIT_URL, '_blank');
-} else {
-// If offline, Admin button clears local data
-btn.onclick = () => {
-if(confirm("Offline Mode: Clear all local data?")) {
-localStorage.removeItem('relax_local_data');
+if(currentUser) showApp(currentUser);
+
+document.getElementById('auth-form').addEventListener('submit', (e) => {
+e.preventDefault();
+const val = document.getElementById('auth-username').value;
+if(val) {
+currentUser = val;
+sessionStorage.setItem('relaxUser', currentUser);
+showApp(currentUser);
+}
+});
+
+document.getElementById('logout-btn').addEventListener('click', () => {
+sessionStorage.removeItem('relaxUser');
 location.reload();
+});
+
+// --- NAVIGATION ---
+function showMainView() {
+document.getElementById('main-view').classList.remove('hidden');
+document.getElementById('group-view').classList.add('hidden');
+currentGroup = null;
+}
+function showGroupView(groupName) {
+currentGroup = groupName;
+document.getElementById('main-view').classList.add('hidden');
+document.getElementById('group-view').classList.remove('hidden');
+document.getElementById('group-view-title').textContent = groupName;
+document.getElementById('group-settings-menu').classList.add('hidden');
+renderGroupMessages(groupName);
+}
+
+document.getElementById('all-posts-btn').onclick = showMainView;
+document.getElementById('exit-group-btn').onclick = showMainView;
+
+// --- POSTS & FEED ---
+function renderPosts() {
+const list = document.getElementById('feed-list');
+list.innerHTML = '';
+if(allPosts.length === 0) {
+document.getElementById('feed-empty').classList.remove('hidden');
+} else {
+document.getElementById('feed-empty').classList.add('hidden');
+allPosts.forEach((post, index) => {
+const li = document.createElement('li');
+li.className = "p-2 rounded bg-white/5 border border-white/5 flex justify-between items-start animate-[fadeIn_0.3s]";
+const contentDiv = document.createElement('div');
+contentDiv.innerHTML = `<span class="font-bold text-[#38bdf8]">${post.user}:</span> ${post.text}`;
+li.appendChild(contentDiv);
+
+if(isAdmin) {
+const delBtn = document.createElement('button');
+delBtn.innerText = "Delete";
+delBtn.className = "text-white bg-red-500 hover:bg-red-600 text-[10px] uppercase font-bold ml-2 px-2 py-0.5 rounded";
+delBtn.onclick = () => {
+allPosts.splice(index, 1);
+saveData('relax_posts', allPosts);
+renderPosts();
+};
+li.appendChild(delBtn);
+}
+list.prepend(li);
+});
+}
+}
+
+document.getElementById('post-form').addEventListener('submit', (e) => {
+e.preventDefault();
+const text = document.getElementById('post-text').value;
+if(!text) return;
+
+allPosts.push({ user: currentUser, text: text, time: Date.now() });
+saveData('relax_posts', allPosts);
+renderPosts();
+document.getElementById('post-text').value = '';
+document.getElementById('form-status').textContent = "Sent!";
+setTimeout(() => document.getElementById('form-status').textContent = "", 2000);
+});
+
+// --- GROUPS ---
+const groupForm = document.getElementById('create-group-form');
+document.getElementById('create-group-btn').onclick = () => groupForm.classList.remove('hidden');
+document.getElementById('cancel-group-btn').onclick = () => groupForm.classList.add('hidden');
+
+function renderGroups() {
+const list = document.getElementById('groups-list');
+list.innerHTML = '';
+const allBtn = document.createElement('button');
+allBtn.type="button";
+allBtn.id="all-posts-btn";
+allBtn.className="focus-outline text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/30 bg-white/20 hover:bg-white/25 transition";
+allBtn.textContent="📋 All Posts";
+allBtn.onclick = showMainView;
+list.appendChild(allBtn);
+
+allGroups.forEach(g => {
+const btn = document.createElement('button');
+btn.type = 'button';
+btn.className = "focus-outline text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 hover:bg-white/15 transition";
+btn.textContent = "# " + g.name + (g.password ? " 🔒" : "");
+
+btn.onclick = () => {
+if(isAdmin) {
+showGroupView("# " + g.name);
+} else if (g.password) {
+let attempt = prompt("Enter password for " + g.name + ":");
+if(attempt === g.password) {
+showGroupView("# " + g.name);
+} else {
+alert("Wrong password!");
+}
+} else {
+showGroupView("# " + g.name);
 }
 };
-}
+list.appendChild(btn);
+});
 }
 
-// START SYNC
-syncData();
-// If online, check every 5 seconds. If offline, check every 1 second (fast local).
-pollingInterval = setInterval(syncData, isOnline ? 5000 : 1000);
+document.getElementById('group-form').addEventListener('submit', (e) => {
+e.preventDefault();
+const gName = document.getElementById('group-name').value;
+const gPass = document.getElementById('group-password').value;
+
+if(gName) {
+allGroups.push({ name: gName, password: gPass });
+saveData('relax_groups', allGroups);
+renderGroups();
+document.getElementById('group-name').value = '';
+document.getElementById('group-password').value = '';
+groupForm.classList.add('hidden');
+}
 });
 
-document.getElementById('logout-btn').onclick = () => location.reload();
+// --- GROUP SETTINGS ---
+const settingsBtn = document.getElementById('group-settings-btn');
+const settingsMenu = document.getElementById('group-settings-menu');
+const deleteGroupBtn = document.getElementById('delete-group-btn');
 
-// --- 2. DATA HANDLER (HYBRID) ---
-async function syncData() {
-if(isOnline) {
-// ONLINE MODE
-const indicator = document.getElementById('sync-status');
-indicator.classList.remove('hidden');
-try {
-const res = await fetch(DATABASE_URL);
-const data = await res.json();
-appData = data.reverse();
-renderFeed();
-} catch(e) { console.error("Sync failed:", e); }
-indicator.classList.add('hidden');
-} else {
-// OFFLINE MODE (LocalStorage)
-const local = localStorage.getItem('relax_local_data');
-if(local) {
-appData = JSON.parse(local).reverse();
-} else {
-appData = [];
-}
-renderFeed();
-}
-}
+settingsBtn.onclick = () => {
+settingsMenu.classList.toggle('hidden');
+};
+document.getElementById('close-settings-btn').onclick = () => settingsMenu.classList.add('hidden');
 
-async function sendData(type, content, extra = "") {
-const payload = { type, user: currentUser, content, extra: extra || new Date().toLocaleTimeString() };
-
-// Optimistic Update (Show it immediately)
-appData.unshift(payload);
-renderFeed();
-
-if(isOnline) {
-// Send to Google Sheet
-try {
-await fetch(DATABASE_URL, {
-method: 'POST',
-mode: 'no-cors',
-headers: {'Content-Type': 'application/json'},
-body: JSON.stringify(payload)
-});
-} catch(e) { alert("Failed to send to cloud."); }
-} else {
-// Save to LocalStorage
-let currentStore = JSON.parse(localStorage.getItem('relax_local_data') || "[]");
-currentStore.push(payload);
-localStorage.setItem('relax_local_data', JSON.stringify(currentStore));
-}
-}
-
-// --- 3. RENDERING ---
-function renderFeed() {
-const list = document.getElementById('feed-list');
-list.innerHTML = "";
-
-const posts = appData.filter(x => x.type === 'post');
-
-if(posts.length === 0) {
-list.innerHTML = '<div class="text-center text-xs opacity-50 mt-4">No posts yet.</div>';
+deleteGroupBtn.onclick = () => {
+if(!isAdmin) {
+alert("Only Admin can delete groups right now.");
 return;
 }
+if(confirm("Delete this group permanently?")) {
+const cleanName = currentGroup.replace("# ", "");
+allGroups = allGroups.filter(g => g.name !== cleanName);
+saveData('relax_groups', allGroups);
+renderGroups();
+showMainView();
+}
+};
 
-posts.forEach(p => {
+// --- GROUP MESSAGING (Persistent) ---
+function renderGroupMessages(group) {
+const list = document.getElementById('group-messages-list');
+list.innerHTML = '<li class="text-center opacity-50 italic mt-4 text-xs">Welcome to the group chat.</li>';
+
+const msgs = allGroupMsgs[group] || [];
+msgs.forEach(m => {
+const li = document.createElement('li');
+li.className = "p-2 bg-white/5 rounded border border-white/5 break-words";
+li.innerHTML = `<span class="font-bold text-[#38bdf8]">${m.user}:</span> ${m.text}`;
+list.appendChild(li);
+});
+list.scrollTop = list.scrollHeight;
+}
+
+document.getElementById('group-message-form').addEventListener('submit', (e) => {
+e.preventDefault();
+const txt = document.getElementById('group-message-text').value;
+if(txt && currentGroup) {
+if(!allGroupMsgs[currentGroup]) allGroupMsgs[currentGroup] = [];
+allGroupMsgs[currentGroup].push({ user: currentUser, text: txt, time: Date.now() });
+
+saveData('relax_group_msgs', allGroupMsgs);
+renderGroupMessages(currentGroup); // Update local view immediately
+document.getElementById('group-message-text').value = '';
+}
+});
+
+// --- GALLERY ---
+function renderGallery() {
+const cont = document.getElementById('gallery-container');
+cont.innerHTML = '';
+if(allGallery.length === 0) {
+cont.innerHTML = '<p class="text-xs opacity-50 col-span-full">Post your drawings in the game to see them here!</p>';
+return;
+}
+allGallery.forEach(imgData => {
+const wrapper = document.createElement('div');
+wrapper.className = "aspect-video bg-black rounded border border-white/10 overflow-hidden relative group";
+
+const img = document.createElement('img');
+img.src = imgData;
+img.className = "w-full h-full object-cover";
+
+wrapper.appendChild(img);
+cont.prepend(wrapper);
+});
+}
+
+// --- MODE SELECTOR ---
+function applyMode(mode) {
+const app = document.getElementById('relax-app');
+app.style.backgroundColor = "#1a1a1a";
+app.style.backgroundImage = "none";
+if(mode === "Calm") app.style.backgroundImage = "radial-gradient(circle at top left, rgba(56,189,248,0.2), transparent 50%)";
+if(mode === "Dreamy") app.style.backgroundImage = "radial-gradient(circle at top, rgba(168,85,247,0.2), transparent 50%)";
+if(mode === "Cozy") app.style.backgroundImage = "radial-gradient(circle at bottom, rgba(248,113,113,0.2), transparent 50%)";
+}
+document.querySelectorAll('.mode-btn').forEach(b => b.addEventListener('click', () => applyMode(b.dataset.mode)));
+applyMode('Calm');
+
+// --- GAME SWITCHING ---
+const gameDivs = {
+'breathing': document.getElementById('breathing-game'),
+'drawing': document.getElementById('drawing-game'),
+'stars': document.getElementById('stars-game'),
+'ripple': document.getElementById('ripple-game'),
+'blockblast': document.getElementById('blockblast-game'),
+'popcorn': document.getElementById('popcorn-game'),
+'snake': document.getElementById('snake-game')
+};
+document.querySelectorAll('.game-btn').forEach(btn => {
+btn.addEventListener('click', () => {
+Object.values(gameDivs).forEach(d => d.classList.add('hidden'));
+const g = btn.dataset.game;
+gameDivs[g].classList.remove('hidden');
+gameDivs[g].classList.add('flex');
+
+if(g === 'drawing') resizeDrawingCanvas();
+if(g === 'blockblast') initBlockBlast();
+if(g === 'popcorn') initPopcorn();
+if(g === 'snake') resetSnakeUI();
+});
+});
+
+// --- DRAWING & GALLERY SAVING ---
+const dCvs = document.getElementById('drawing-canvas');
+const dCtx = dCvs.getContext('2d');
+let dPainting = false;
+let dColor = '#38bdf8';
+let dTool = 'pen';
+let dSize = 5;
+
+function resizeDrawingCanvas() {}
+function getDrawPos(e) {
+const rect = dCvs.getBoundingClientRect();
+const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+return {
+x: (clientX - rect.left) * (dCvs.width / rect.width),
+y: (clientY - rect.top) * (dCvs.height / rect.height)
+};
+}
+function startDraw(e) { dPainting = true; draw(e); }
+function endDraw() { dPainting = false; dCtx.beginPath(); }
+function draw(e) {
+if(!dPainting) return;
+const pos = getDrawPos(e);
+dCtx.lineWidth = dSize;
+dCtx.lineCap = 'round';
+
+if(dTool === 'eraser') {
+dCtx.globalCompositeOperation = 'destination-out';
+} else {
+dCtx.globalCompositeOperation = 'source-over';
+dCtx.strokeStyle = dColor;
+dCtx.globalAlpha = (dTool === 'marker') ? 0.4 : 1.0;
+if(dTool === 'brush') { dCtx.shadowBlur = 5; dCtx.shadowColor = dColor; } else { dCtx.shadowBlur = 0; }
+}
+dCtx.lineTo(pos.x, pos.y);
+dCtx.stroke();
+dCtx.beginPath();
+dCtx.moveTo(pos.x, pos.y);
+}
+
+dCvs.addEventListener('mousedown', startDraw);
+dCvs.addEventListener('mouseup', endDraw);
+dCvs.addEventListener('mousemove', draw);
+dCvs.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e); }, {passive: false});
+dCvs.addEventListener('touchend', (e) => { e.preventDefault(); endDraw(e); }, {passive: false});
+dCvs.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, {passive: false});
+
+document.getElementById('clear-canvas').addEventListener('click', () => dCtx.clearRect(0,0,800,400));
+
+// SAVE DRAWING
+document.getElementById('post-drawing-btn').addEventListener('click', () => {
+const data = dCvs.toDataURL('image/png');
+allGallery.push(data);
+saveData('relax_gallery', allGallery);
+renderGallery();
+alert("Drawing posted to Gallery!");
+});
+
+document.querySelectorAll('.tool-btn').forEach(b => b.addEventListener('click', () => {
+dTool = b.dataset.tool;
+document.querySelectorAll('.tool-btn').forEach(t => t.classList.remove('bg-[#38bdf8]/20', 'border-[#38bdf8]'));
+b.classList.add('bg-[#38bdf8]/20', 'border-[#38bdf8]');
+}));
+document.querySelectorAll('.size-btn').forEach(b => b.addEventListener('click', () => {
+dSize = parseInt(b.dataset.size);
+document.querySelectorAll('.size-btn').forEach(t => t.classList.remove('bg-[#38bdf8]/20', 'border-[#38bdf8]'));
+b.classList.add('bg-[#38bdf8]/20', 'border-[#38bdf8]');
+}));
+document.querySelectorAll('.color-btn').forEach(b => b.addEventListener('click', () => {
+dColor = b.dataset.drawColor;
+document.querySelectorAll('.color-btn').forEach(c => c.style.borderWidth = '2px');
+document.querySelectorAll('.color-btn').forEach(c => c.style.borderColor = 'rgba(255,255,255,0.2)');
+b.style.borderColor = 'white';
+}));
+
+// --- SNAKE ONLINE FIX ---
+const sMenu = document.getElementById('snake-menu');
+const sServers = document.getElementById('snake-servers');
+const sLobby = document.getElementById('snake-lobby');
+const sPlay = document.getElementById('snake-play-area');
+const sCanvas = document.getElementById('snake-canvas');
+const sCtx = sCanvas.getContext('2d');
+
+let snakeInterval;
+let snakes = [];
+
+function resetSnakeUI() {
+sMenu.classList.remove('hidden');
+sServers.classList.add('hidden');
+sLobby.classList.add('hidden');
+sPlay.classList.add('hidden');
+clearInterval(snakeInterval);
+}
+
+document.getElementById('snake-single-btn').onclick = () => startGame(false);
+document.getElementById('snake-online-btn').onclick = () => {
+sMenu.classList.add('hidden');
+sServers.classList.remove('hidden');
+sServers.classList.add('flex');
+};
+document.getElementById('back-to-menu').onclick = resetSnakeUI;
+document.getElementById('snake-quit').onclick = resetSnakeUI;
+
+document.querySelectorAll('.server-item').forEach(btn => {
+btn.onclick = function() {
+const serverName = this.dataset.server;
+sServers.classList.add('hidden');
+sLobby.classList.remove('hidden');
+sLobby.classList.add('flex');
+document.getElementById('lobby-server-name').innerText = serverName;
+startLobbySim();
+}
+});
+
+function startLobbySim() {
+const list = document.getElementById('lobby-list');
+list.innerHTML = `<div class="p-2 border-b border-white/5 text-[#38bdf8] font-bold">You (Ready)</div>`;
+const btn = document.getElementById('lobby-start-btn');
+btn.innerText = "Finding Match...";
+btn.className = "w-full py-2 bg-[#22c55e] text-black font-bold rounded-lg opacity-50 cursor-not-allowed transition";
+
+const bots = ["Shadow_Hunter", "Viper_Queen", "Slayer_99", "NoobMaster", "Pro_Gamer_1"];
+let count = 0;
+
+const joinInt = setInterval(() => {
+if(count >= 3) { // Wait for 3 bots
+clearInterval(joinInt);
+btn.innerText = "Starting Game...";
+btn.style.opacity = "1";
+setTimeout(() => {
+sLobby.classList.add('hidden');
+startGame(true); // START ONLINE GAME
+}, 1000);
+return;
+}
 const div = document.createElement('div');
-div.className = "p-2.5 rounded bg-white/5 border border-white/5 animate-fade";
-const isAdmin = p.user === 'Ray_irl';
-div.innerHTML = `
-<div class="flex justify-between items-baseline">
-<span class="text-xs font-bold ${isAdmin ? 'text-yellow-400' : 'text-[#38bdf8]'}">
-${p.user} ${isAdmin ? '<span class="bg-red-500 text-white px-1 rounded text-[9px]">ADMIN</span>' : ''}
-</span>
-<span class="text-[9px] opacity-40">${p.extra || ''}</span>
-</div>
-<div class="text-sm mt-1 break-words">${p.content}</div>
-`;
+div.className = "p-2 border-b border-white/5 opacity-80";
+div.innerText = bots[count] + " (Ready)";
 list.appendChild(div);
+count++;
+}, 800);
+}
+
+function startGame(online) {
+sMenu.classList.add('hidden');
+sPlay.classList.remove('hidden');
+sPlay.classList.add('flex');
+
+snakes = [];
+// Player
+snakes.push({
+id: 'player', color: '#38bdf8', body: [{x:10, y:10}, {x:9, y:10}, {x:8, y:10}],
+dx: 1, dy: 0, dead: false, name: "You"
+});
+
+// Bots
+const botColors = ['#ef4444', '#22c55e', '#a855f7', '#eab308'];
+const starts = [{x:25,y:5}, {x:5,y:15}, {x:25,y:15}, {x:15, y:5}];
+
+let botCount = online ? 4 : 2; // More bots if online
+
+for(let i=0; i<botCount; i++) {
+snakes.push({
+id: 'bot'+i, color: botColors[i%4],
+body: [{x:starts[i].x, y:starts[i].y}, {x:starts[i].x, y:starts[i].y+1}],
+dx: 0, dy: -1, dead: false, isBot: true
 });
 }
 
-document.getElementById('post-btn').onclick = () => {
-const txt = document.getElementById('post-input');
-if(txt.value.trim()) {
-sendData('post', txt.value.trim());
-txt.value = "";
+document.getElementById('snake-status-text').innerText = online ? "Online Match - Survive!" : "Practice Mode";
+document.getElementById('snake-status-text').style.color = "#38bdf8";
+
+clearInterval(snakeInterval);
+snakeInterval = setInterval(gameLoop, 100);
 }
-};
-document.getElementById('refresh-btn').onclick = syncData;
-
-// --- 4. MOODS ---
-document.querySelectorAll('.mood-btn').forEach(btn => {
-btn.onclick = () => {
-document.body.style.backgroundColor = btn.dataset.color;
-};
-});
-
-// --- 5. GAME ENGINE (FIXED) ---
-const gameContainer = document.getElementById('game-display');
-let gameLoopRef = null;
-
-window.showGame = function(gameName) {
-if(gameLoopRef) cancelAnimationFrame(gameLoopRef);
-// Clear Intervals just in case
-let id = window.setInterval(function() {}, 0);
-while (id--) { window.clearInterval(id); }
-// Restore Sync Interval
-pollingInterval = setInterval(syncData, isOnline ? 5000 : 1000);
-
-gameContainer.innerHTML = '';
-gameContainer.style.backgroundColor = '#000';
-
-if(gameName === 'snake') startSnake();
-if(gameName === 'block') startBlockBlast();
-if(gameName === 'popcorn') startPopcorn();
-if(gameName === 'draw') startDrawing();
-if(gameName === 'breathe') startBreathing();
-};
-
-// --- GAME 1: SNAKE ---
-function startSnake() {
-gameContainer.innerHTML = `
-<canvas id="snake-cvs" width="400" height="300" class="border border-white/20"></canvas>
-<div class="absolute top-2 left-2 text-xs text-[#38bdf8]">Arrow Keys to Move</div>
-<div id="snake-score" class="absolute top-2 right-2 text-xs font-bold">Score: 0</div>
-`;
-const cvs = document.getElementById('snake-cvs');
-const ctx = cvs.getContext('2d');
-let snake = [{x:10, y:10}, {x:9,y:10}, {x:8,y:10}];
-let dx = 1, dy = 0;
-let food = {x:15, y:10};
-let score = 0;
-let lastTime = 0;
 
 document.onkeydown = e => {
-if(e.key==='ArrowUp' && dy!==1) {dx=0;dy=-1;}
-if(e.key==='ArrowDown' && dy!==-1) {dx=0;dy=1;}
-if(e.key==='ArrowLeft' && dx!==1) {dx=-1;dy=0;}
-if(e.key==='ArrowRight' && dx!==-1) {dx=1;dy=0;}
+const p = snakes[0];
+if(p.dead) return;
+if(e.key==='ArrowUp' && p.dy!==1) {p.dx=0;p.dy=-1;}
+if(e.key==='ArrowDown' && p.dy!==-1) {p.dx=0;p.dy=1;}
+if(e.key==='ArrowLeft' && p.dx!==1) {p.dx=-1;p.dy=0;}
+if(e.key==='ArrowRight' && p.dx!==-1) {p.dx=1;p.dy=0;}
 };
 
-function loop(timestamp) {
-if (timestamp - lastTime < 100) {
-gameLoopRef = requestAnimationFrame(loop);
+function gameLoop() {
+sCtx.fillStyle = "#2a2a2a";
+sCtx.fillRect(0,0,600,400);
+
+snakes.forEach(s => {
+if(s.dead) return;
+
+// Simple Bot AI
+if(s.isBot) {
+if(Math.random() < 0.15) { // Change direction randomly
+const moves = [{dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0}];
+const safeMoves = moves.filter(m => {
+if(m.dx === -s.dx && m.dy === -s.dy) return false; // Don't reverse
+const nx = s.body[0].x + m.dx;
+const ny = s.body[0].y + m.dy;
+return (nx >=0 && nx < 30 && ny >= 0 && ny < 20); // Stay in bounds
+});
+if(safeMoves.length > 0) {
+const move = safeMoves[Math.floor(Math.random()*safeMoves.length)];
+s.dx = move.dx; s.dy = move.dy;
+}
+}
+}
+
+const head = {x: s.body[0].x + s.dx, y: s.body[0].y + s.dy};
+
+// Wall Collision
+if(head.x < 0 || head.x >= 30 || head.y < 0 || head.y >= 20) {
+s.dead = true;
 return;
 }
-lastTime = timestamp;
-const head = {x: snake[0].x + dx, y: snake[0].y + dy};
 
-// Collision checks
-if(head.x<0 || head.x>=20 || head.y<0 || head.y>=15 || snake.some(s => s.x === head.x && s.y === head.y)) {
-ctx.fillStyle = "white"; ctx.fillText("GAME OVER", 160, 150);
-return;
-}
-
-snake.unshift(head);
-if(head.x === food.x && head.y === food.y) {
-score++;
-document.getElementById('snake-score').innerText = "Score: " + score;
-food = {x: Math.floor(Math.random()*20), y: Math.floor(Math.random()*15)};
-} else {
-snake.pop();
-}
-
-// Draw
-ctx.fillStyle = "#1a1a1a"; ctx.fillRect(0,0,400,300);
-ctx.fillStyle = "#ef4444"; ctx.fillRect(food.x*20, food.y*20, 18, 18);
-ctx.fillStyle = "#38bdf8"; snake.forEach(s => ctx.fillRect(s.x*20, s.y*20, 18, 18));
-gameLoopRef = requestAnimationFrame(loop);
-}
-gameLoopRef = requestAnimationFrame(loop);
-}
-
-// --- GAME 2: BLOCK BLAST ---
-function startBlockBlast() {
-gameContainer.innerHTML = `
-<div class="flex flex-col items-center gap-2">
-<div class="text-xs">Click blocks to clear!</div>
-<div id="bb-grid" class="grid grid-cols-8 gap-1 p-2 bg-white/5 rounded"></div>
-<div id="bb-score">Score: 0</div>
-</div>
-`;
-const grid = document.getElementById('bb-grid');
-const colors = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500'];
-let score = 0;
-for(let i=0; i<64; i++) {
-const btn = document.createElement('div');
-let c = colors[Math.floor(Math.random()*colors.length)];
-btn.className = `w-8 h-8 rounded ${c} cursor-pointer hover:opacity-80 transition`;
-btn.onclick = () => {
-score += 10;
-document.getElementById('bb-score').innerText = "Score: " + score;
-btn.className = `w-8 h-8 rounded ${colors[Math.floor(Math.random()*colors.length)]} cursor-pointer animate-fade`;
-};
-grid.appendChild(btn);
-}
-}
-
-// --- GAME 3: POPCORN ---
-function startPopcorn() {
-gameContainer.innerHTML = '<canvas id="pop-cvs" width="400" height="300"></canvas>';
-const ctx = document.getElementById('pop-cvs').getContext('2d');
-let kernels = [];
-
-document.getElementById('pop-cvs').onclick = (e) => {
-const rect = e.target.getBoundingClientRect();
-kernels.push({
-x: e.clientX - rect.left, y: e.clientY - rect.top,
-vx: (Math.random()-0.5)*10, vy: -10, popped: false
+// Snake Collision
+snakes.forEach(other => {
+if(other.dead) return;
+other.body.forEach(seg => {
+if(head.x === seg.x && head.y === seg.y) s.dead = true;
 });
-};
-
-function loop() {
-ctx.fillStyle = "#1a1a1a"; ctx.fillRect(0,0,400,300);
-ctx.fillStyle = "#fff"; ctx.fillText("Click to spawn popcorn!", 10, 20);
-
-kernels.forEach(k => {
-k.x += k.vx; k.y += k.vy; k.vy += 0.5;
-if(k.y > 290) { k.y = 290; k.vy *= -0.6; }
-if(k.x < 0 || k.x > 400) k.vx *= -1;
-if(!k.popped && Math.abs(k.vy) < 1 && k.y > 280) k.popped = true;
-
-ctx.beginPath();
-if(k.popped) {
-ctx.fillStyle = "#facc15"; ctx.arc(k.x, k.y, 6, 0, Math.PI*2); ctx.fill();
-} else {
-ctx.fillStyle = "#a16207"; ctx.fillRect(k.x-3, k.y-3, 6, 6);
-}
 });
-gameLoopRef = requestAnimationFrame(loop);
-}
-loop();
-}
 
-// --- GAME 4: DRAWING ---
-function startDrawing() {
-gameContainer.innerHTML = `
-<div class="relative w-full h-full flex flex-col">
-<div class="absolute top-2 left-2 flex gap-2">
-<button class="p-1 bg-red-500 rounded-full w-6 h-6" onclick="window.dColor='#ef4444'"></button>
-<button class="p-1 bg-blue-500 rounded-full w-6 h-6" onclick="window.dColor='#3b82f6'"></button>
-<button class="p-1 bg-white rounded-full w-6 h-6" onclick="window.dColor='#ffffff'"></button>
-<button class="px-2 py-0.5 bg-white/10 text-[10px] rounded" onclick="window.dCtx.clearRect(0,0,400,300)">Clear</button>
-</div>
-<canvas id="draw-cvs" width="400" height="300" class="cursor-crosshair"></canvas>
-</div>
-`;
-const cvs = document.getElementById('draw-cvs');
-window.dCtx = cvs.getContext('2d');
-window.dColor = "#ffffff";
-let painting = false;
+if(s.dead) return;
 
-cvs.addEventListener('mousedown', (e) => { painting = true; draw(e); });
-cvs.addEventListener('mouseup', () => { painting = false; dCtx.beginPath(); });
-cvs.addEventListener('mousemove', draw);
+s.body.unshift(head);
+if(s.body.length > 5 && Math.random() > 0.05) s.body.pop();
+});
 
-function draw(e) {
-if(!painting) return;
-const rect = cvs.getBoundingClientRect();
-dCtx.lineWidth = 3; dCtx.lineCap = 'round'; dCtx.strokeStyle = dColor;
-dCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-dCtx.stroke(); dCtx.beginPath();
-dCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+// Draw Snakes
+snakes.forEach(s => {
+if(s.dead) return;
+sCtx.fillStyle = s.color;
+s.body.forEach(b => sCtx.fillRect(b.x*20, b.y*20, 18, 18));
+// Eyes
+sCtx.fillStyle = "white";
+sCtx.fillRect(s.body[0].x*20+4, s.body[0].y*20+4, 4, 4);
+sCtx.fillRect(s.body[0].x*20+12, s.body[0].y*20+4, 4, 4);
+});
+
+if(snakes[0].dead) {
+document.getElementById('snake-status-text').innerText = "Eliminated!";
+document.getElementById('snake-status-text').style.color = "red";
 }
 }
 
-// --- GAME 5: BREATHING ---
-function startBreathing() {
-gameContainer.innerHTML = `
-<div class="flex flex-col items-center justify-center h-full">
-<div id="breath-circle" class="w-32 h-32 rounded-full border-4 border-[#38bdf8] flex items-center justify-center transition-all duration-[4000ms] ease-in-out">
-<span id="breath-text" class="text-sm">Inhale</span>
-</div>
-</div>
-`;
-const c = document.getElementById('breath-circle');
-const t = document.getElementById('breath-text');
+// --- GAMES INIT (BREATHING/ETC) ---
+// Breathing
+let bState = false, bInt;
+document.getElementById('breathing-toggle').addEventListener('click', function() {
+bState = !bState;
+const c = document.getElementById('breathing-circle');
+const l = document.getElementById('breathing-label');
+if(bState) {
+this.textContent = "Stop";
 let inhale = true;
-setTimeout(() => { c.style.transform = "scale(1.5)"; }, 100);
-setInterval(() => {
+c.style.transform = "scale(1.2)";
+bInt = setInterval(() => {
 inhale = !inhale;
-t.innerText = inhale ? "Inhale" : "Exhale";
-c.style.transform = inhale ? "scale(1.5)" : "scale(1.0)";
+l.textContent = inhale ? "Inhale..." : "Exhale...";
+c.style.transform = inhale ? "scale(1.2)" : "scale(1)";
 }, 4000);
+} else {
+this.textContent = "Start";
+clearInterval(bInt);
+c.style.transform = "scale(1)";
+l.textContent = "Press Start";
+}
+});
+// Ripple
+const rCanvas = document.getElementById('ripple-canvas');
+function createRipple(x, y) {
+const r = document.createElement('div');
+r.className = "absolute rounded-full border-2 border-[#38bdf8]";
+r.style.left = (x - 50) + 'px'; r.style.top = (y - 50) + 'px';
+r.style.width = '100px'; r.style.height = '100px';
+r.style.animation = "rippleExpand 2s ease-out forwards";
+rCanvas.appendChild(r);
+setTimeout(() => r.remove(), 2000);
+}
+rCanvas.addEventListener('mousemove', (e) => {
+const rect = rCanvas.getBoundingClientRect();
+createRipple(e.clientX - rect.left, e.clientY - rect.top);
+});
+// Block Blast
+function initBlockBlast() {
+const bbGrid = document.getElementById('bb-grid'); bbGrid.innerHTML = '';
+for(let i=0;i<64;i++) {
+let d = document.createElement('div'); d.className="bg-white/10 rounded"; bbGrid.appendChild(d);
+}
+document.getElementById('bb-shapes').innerHTML = "<div class='text-xs opacity-50'>Click shapes to play</div>";
+}
+// Popcorn
+function initPopcorn() {
+const cvs = document.getElementById('popcorn-canvas');
+const ctx = cvs.getContext('2d');
+ctx.fillStyle = "#eab308"; ctx.fillRect(50, 350, 30, 30);
 }
 </script>
 </body>
 </html>
+
 
 
